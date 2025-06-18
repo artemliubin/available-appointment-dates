@@ -31,6 +31,14 @@ function processData(dates) {
         year: 'numeric' 
     });
     
+    // Get last available date
+    const lastDate = new Date(dates[dates.length - 1].workDaySlot);
+    const lastDateFormatted = lastDate.toLocaleDateString('en-US', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+    });
+    
     // Create a map of available dates
     const availableDates = {};
     dates.forEach(date => {
@@ -67,8 +75,13 @@ function processData(dates) {
     firstDateDiv.className = 'first-date';
     firstDateDiv.textContent = `First available date: ${firstDateFormatted}`;
     
+    const lastDateDiv = document.createElement('div');
+    lastDateDiv.className = 'last-date';
+    lastDateDiv.textContent = `Last available date: ${lastDateFormatted}`;
+    
     headerSection.appendChild(title);
     headerSection.appendChild(firstDateDiv);
+    headerSection.appendChild(lastDateDiv);
     container.appendChild(headerSection);
     
     // Display three months
@@ -187,6 +200,11 @@ function initializeEventListeners() {
         currentDate.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     
+    // Create backdrop for mobile popups
+    const backdrop = document.createElement('div');
+    backdrop.className = 'popup-backdrop';
+    document.body.appendChild(backdrop);
+    
     // Add click handlers for available days
     const days = document.querySelectorAll('.calendar-day.available');
     days.forEach(day => {
@@ -194,46 +212,162 @@ function initializeEventListeners() {
             const slotsDetails = this.querySelector('.slots-details');
             const timeSlots = JSON.parse(slotsDetails.dataset.slots);
             
-            // Close any other expanded days
-            document.querySelectorAll('.calendar-day.available.expanded').forEach(expandedDay => {
-                if (expandedDay !== this) {
-                    expandedDay.classList.remove('expanded');
-                    expandedDay.querySelector('.time-slots-grid').innerHTML = '';
-                }
-            });
+            // Check if we're on mobile (screen width <= 768px)
+            const isMobile = window.innerWidth <= 768;
             
-            if (!this.classList.contains('expanded')) {
-                // Create time slots grid if it doesn't exist
-                let timeSlotsGrid = this.querySelector('.time-slots-grid');
-                if (!timeSlotsGrid) {
-                    timeSlotsGrid = document.createElement('div');
-                    timeSlotsGrid.className = 'time-slots-grid';
-                    this.appendChild(timeSlotsGrid);
-                }
-                
-                // Add time slots
-                timeSlotsGrid.innerHTML = timeSlots.map(slot => 
-                    `<div class="time-slot">${slot}</div>`
-                ).join('');
-                
-                this.classList.add('expanded');
+            if (isMobile) {
+                // Mobile popup behavior
+                showMobilePopup(timeSlots);
             } else {
-                this.classList.remove('expanded');
+                // Desktop popup behavior
+                // Close any other expanded days
+                document.querySelectorAll('.calendar-day.available.expanded').forEach(expandedDay => {
+                    if (expandedDay !== this) {
+                        expandedDay.classList.remove('expanded');
+                        const grid = expandedDay.querySelector('.time-slots-grid');
+                        if (grid) grid.innerHTML = '';
+                    }
+                });
+                
+                if (!this.classList.contains('expanded')) {
+                    // Create time slots grid if it doesn't exist
+                    let timeSlotsGrid = this.querySelector('.time-slots-grid');
+                    if (!timeSlotsGrid) {
+                        timeSlotsGrid = document.createElement('div');
+                        timeSlotsGrid.className = 'time-slots-grid';
+                        this.appendChild(timeSlotsGrid);
+                    }
+                    
+                    // Add time slots
+                    timeSlotsGrid.innerHTML = timeSlots.map(slot => 
+                        `<div class="time-slot">${slot}</div>`
+                    ).join('');
+                    
+                    // Calculate position BEFORE showing popup to prevent flash
+                    const rect = this.getBoundingClientRect();
+                    const viewportHeight = window.innerHeight;
+                    const estimatedPopupHeight = 120; // Approximate height of popup
+                    
+                    // If popup would go below viewport, position it above
+                    if (rect.bottom + estimatedPopupHeight > viewportHeight) {
+                        timeSlotsGrid.classList.add('bottom-position');
+                    }
+                    
+                    this.classList.add('expanded');
+                    
+                    // Show the popup after positioning is set
+                    setTimeout(() => {
+                        timeSlotsGrid.classList.add('show');
+                    }, 10);
+                } else {
+                    this.classList.remove('expanded');
+                    const timeSlotsGrid = this.querySelector('.time-slots-grid');
+                    if (timeSlotsGrid) {
+                        timeSlotsGrid.classList.remove('show', 'bottom-position');
+                    }
+                }
             }
             
             e.stopPropagation();
         });
     });
     
-    // Close expanded day when clicking outside
+    // Close expanded day when clicking outside (desktop only)
     document.addEventListener('click', function(e) {
-        if (!e.target.closest('.calendar-day.available')) {
+        if (window.innerWidth > 768 && !e.target.closest('.calendar-day.available')) {
             document.querySelectorAll('.calendar-day.available.expanded').forEach(day => {
                 day.classList.remove('expanded');
-                day.querySelector('.time-slots-grid').innerHTML = '';
+                const grid = day.querySelector('.time-slots-grid');
+                if (grid) {
+                    grid.innerHTML = '';
+                    grid.classList.remove('show', 'bottom-position');
+                }
             });
         }
     });
+    
+    // Close mobile popup when clicking backdrop
+    backdrop.addEventListener('click', function(e) {
+        if (e.target === backdrop) {
+            closeMobilePopup();
+        }
+    });
+}
+
+// Show mobile popup
+function showMobilePopup(timeSlots) {
+    // Remove any existing mobile popup
+    const existingPopup = document.querySelector('.mobile-time-slots-popup');
+    if (existingPopup) {
+        existingPopup.remove();
+    }
+    
+    // Create popup container
+    const popup = document.createElement('div');
+    popup.className = 'time-slots-grid mobile-time-slots-popup';
+    
+    // Add close button
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'popup-close';
+    closeBtn.innerHTML = '×';
+    closeBtn.addEventListener('click', closeMobilePopup);
+    popup.appendChild(closeBtn);
+    
+    // Create time slots container with single column layout
+    const timeSlotsContainer = document.createElement('div');
+    timeSlotsContainer.style.display = 'flex';
+    timeSlotsContainer.style.flexDirection = 'column';
+    timeSlotsContainer.style.width = '100%';
+    timeSlotsContainer.style.alignItems = 'center';
+    timeSlotsContainer.style.justifyContent = 'center';
+    timeSlotsContainer.style.gap = '0.5rem';
+    
+    // Add time slots to container
+    timeSlots.forEach(slot => {
+        const timeSlot = document.createElement('div');
+        timeSlot.className = 'time-slot';
+        timeSlot.textContent = slot;
+        timeSlot.style.textAlign = 'center';
+        timeSlot.style.display = 'flex';
+        timeSlot.style.alignItems = 'center';
+        timeSlot.style.justifyContent = 'center';
+        timeSlot.style.width = '100%';
+        timeSlotsContainer.appendChild(timeSlot);
+    });
+    
+    // Add time slots container to popup
+    popup.appendChild(timeSlotsContainer);
+    
+    // Add to body
+    document.body.appendChild(popup);
+    
+    // Show backdrop
+    const backdrop = document.querySelector('.popup-backdrop');
+    backdrop.classList.add('active');
+    
+    // Show popup with animation
+    setTimeout(() => {
+        popup.style.opacity = '1';
+        popup.style.pointerEvents = 'auto';
+    }, 10);
+}
+
+// Close mobile popup
+function closeMobilePopup() {
+    const popup = document.querySelector('.mobile-time-slots-popup');
+    const backdrop = document.querySelector('.popup-backdrop');
+    
+    if (popup) {
+        popup.style.opacity = '0';
+        popup.style.pointerEvents = 'none';
+        setTimeout(() => {
+            popup.remove();
+        }, 300);
+    }
+    
+    if (backdrop) {
+        backdrop.classList.remove('active');
+    }
 }
 
 // Initialize the application
