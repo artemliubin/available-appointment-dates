@@ -43,13 +43,15 @@ function processData(dates) {
     const availableDates = {};
     dates.forEach(date => {
         const dateObj = new Date(date.workDaySlot);
-        const dateKey = dateObj.toISOString().split('T')[0];
+        const pad = n => n.toString().padStart(2, '0');
+        const dateKey = `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}`;
         availableDates[dateKey] = date;
     });
     
     // Get current date
     const currentDate = new Date();
-    const currentDateKey = currentDate.toISOString().split('T')[0];
+    const pad = n => n.toString().padStart(2, '0');
+    const currentDateKey = `${currentDate.getFullYear()}-${pad(currentDate.getMonth() + 1)}-${pad(currentDate.getDate())}`;
     
     // Get first date of current month
     const firstDateOfCurrentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
@@ -131,7 +133,8 @@ function processData(dates) {
         // Add all days of the month
         const currentDay = new Date(monthStart);
         while (currentDay <= lastDate) {
-            const dateKey = currentDay.toISOString().split('T')[0];
+            const pad = n => n.toString().padStart(2, '0');
+            const dateKey = `${currentDay.getFullYear()}-${pad(currentDay.getMonth() + 1)}-${pad(currentDay.getDate())}`;
             const dayOfWeek = currentDay.getDay();
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
             const isPast = currentDay < currentDate;
@@ -384,4 +387,10 @@ async function init() {
 }
 
 // Start the application
-document.addEventListener('DOMContentLoaded', init); 
+document.addEventListener('DOMContentLoaded', init);
+
+function getLocalDateKey(dateInput) {
+    const dateObj = new Date(dateInput);
+    const pad = n => n.toString().padStart(2, '0');
+    return `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}`;
+} 
