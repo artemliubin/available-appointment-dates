@@ -20,25 +20,31 @@ async function fetchData() {
 
 // Process and display dates
 function processData(dates) {
-    // Sort dates in ascending order
+    // Normalize and sort dates in ascending order
+    if (!Array.isArray(dates)) {
+        dates = [];
+    }
     dates.sort((a, b) => new Date(a.workDaySlot) - new Date(b.workDaySlot));
-    
-    // Get first available date
-    const firstDate = new Date(dates[0].workDaySlot);
-    const firstDateFormatted = firstDate.toLocaleDateString('en-US', { 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric' 
-    });
-    
-    // Get last available date
-    const lastDate = new Date(dates[dates.length - 1].workDaySlot);
-    const lastDateFormatted = lastDate.toLocaleDateString('en-US', { 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric' 
-    });
-    
+
+    // Calculate first/last date only if there are results
+    let firstDateFormatted = null;
+    let lastDateFormatted = null;
+    if (dates.length > 0) {
+        const firstDate = new Date(dates[0].workDaySlot);
+        firstDateFormatted = firstDate.toLocaleDateString('en-US', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+
+        const lastDate = new Date(dates[dates.length - 1].workDaySlot);
+        lastDateFormatted = lastDate.toLocaleDateString('en-US', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+    }
+
     // Create a map of available dates
     const availableDates = {};
     dates.forEach(date => {
@@ -72,18 +78,27 @@ function processData(dates) {
     
     const title = document.createElement('h1');
     title.textContent = 'Available Appointment Dates';
-    
-    const firstDateDiv = document.createElement('div');
-    firstDateDiv.className = 'first-date';
-    firstDateDiv.textContent = `First available date: ${firstDateFormatted}`;
-    
-    const lastDateDiv = document.createElement('div');
-    lastDateDiv.className = 'last-date';
-    lastDateDiv.textContent = `Last available date: ${lastDateFormatted}`;
-    
+
     headerSection.appendChild(title);
-    headerSection.appendChild(firstDateDiv);
-    headerSection.appendChild(lastDateDiv);
+
+    if (firstDateFormatted && lastDateFormatted) {
+        const firstDateDiv = document.createElement('div');
+        firstDateDiv.className = 'first-date';
+        firstDateDiv.textContent = `First available date: ${firstDateFormatted}`;
+
+        const lastDateDiv = document.createElement('div');
+        lastDateDiv.className = 'last-date';
+        lastDateDiv.textContent = `Last available date: ${lastDateFormatted}`;
+
+        headerSection.appendChild(firstDateDiv);
+        headerSection.appendChild(lastDateDiv);
+    } else {
+        const noDatesDiv = document.createElement('div');
+        noDatesDiv.className = 'no-dates';
+        noDatesDiv.textContent = 'No available dates at the moment.';
+        headerSection.appendChild(noDatesDiv);
+    }
+
     container.appendChild(headerSection);
     
     // Display three months
