@@ -1,5 +1,5 @@
 // API endpoint with CORS proxy
-const API_URL = 'https://corsproxy.io/?https://echerga.mod.gov.ua/APPVER4/prelim/getWorkDaysFull/bc614fc7-14c1-4bbf-8a71-eb94ebd63eb0/1f7210a8-242f-4729-97f1-d70122cbd401/89c431f6-f437-418d-a187-e3833edc518c';
+const API_URL = 'https://corsproxy.io/?https://echerga.mod.gov.ua/APPVER4/prelim/getWorkDaysFull/bc614fc7-14c1-4bbf-8a71-eb94ebd63eb0/89c431f6-f437-418d-a187-e3833edc518c';
 
 // Fetch data from API
 async function fetchData() {
